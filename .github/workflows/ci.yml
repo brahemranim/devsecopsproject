@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Set to 'true' to enable pushing built images (requires DOCKERHUB_USERNAME/DOCKERHUB_TOKEN secrets)
-      PUSH_IMAGES: 'false'
+      PUSH_IMAGES: 'true'
 
     steps:
       - name: Checkout repository
