@@ -47,7 +47,7 @@ jobs:
 
       # Build Docker images from Dockerfiles
       - name: Log in to Docker Hub (optional)
-        if: ${{ secrets.DOCKERHUB_TOKEN }}
+        if: ${{ secrets.DOCKERHUB_TOKEN != '' }}
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -55,24 +55,32 @@ jobs:
 
       - name: Build backend Docker image
         run: |
-          docker build -f backend/Dockerfile -t ${{ github.repository_owner }}/todo-backend:${{ github.sha }} backend
+          # Prefer Docker Hub username if provided, otherwise fall back to the repository owner
+          DOCKER_USER=${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_USER=${DOCKER_USER:-${{ github.repository_owner }}}
+          docker build -f backend/Dockerfile -t "$DOCKER_USER/todo-backend:${{ github.sha }}" backend
 
       - name: Build frontend Docker image
         run: |
-          docker build -f frontend/Dockerfile -t ${{ github.repository_owner }}/todo-frontend:${{ github.sha }} frontend
+          DOCKER_USER=${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_USER=${DOCKER_USER:-${{ github.repository_owner }}}
+          docker build -f frontend/Dockerfile -t "$DOCKER_USER/todo-frontend:${{ github.sha }}" frontend
 
       - name: Push images to registry (optional)
-        if: env.PUSH_IMAGES == 'true' && secrets.DOCKERHUB_TOKEN
+        if: ${{ github.ref == 'refs/heads/main' && secrets.DOCKERHUB_TOKEN != '' }}
         run: |
-          docker push ${{ github.repository_owner }}/todo-backend:${{ github.sha }}
-          docker push ${{ github.repository_owner }}/todo-frontend:${{ github.sha }}
+          DOCKER_USER=${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_USER=${DOCKER_USER:-${{ github.repository_owner }}}
+          docker push "$DOCKER_USER/todo-backend:${{ github.sha }}"
+          docker push "$DOCKER_USER/todo-frontend:${{ github.sha }}"
 
       - name: Upload build artifacts (frontend build)
-        if: success() && -d frontend/dist
+        if: ${{ success() }}
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
           path: frontend/dist
+          if-no-files-found: ignore
 
       - name: Show summary
         run: |
