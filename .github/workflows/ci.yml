@@ -1,0 +1,82 @@
+name: CI - MERN (tests & Docker builds)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-build:
+    name: Test, build and produce Docker images
+    runs-on: ubuntu-latest
+    env:
+      # Set to 'true' to enable pushing built images (requires DOCKERHUB_USERNAME/DOCKERHUB_TOKEN secrets)
+      PUSH_IMAGES: 'false'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # Backend: install & test
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run backend tests
+        working-directory: backend
+        run: npm test --if-present
+
+      # Frontend: install, test and build
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm test --if-present
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build --if-present
+
+      # Build Docker images from Dockerfiles (no docker-compose)
+      - name: Log in to Docker Hub (optional)
+        if: ${{ secrets.DOCKERHUB_TOKEN }}
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build backend Docker image
+        run: |
+          docker build -f backend/Dockerfile -t ${{ github.repository_owner }}/todo-backend:${{ github.sha }} backend
+
+      - name: Build frontend Docker image
+        run: |
+          docker build -f frontend/Dockerfile -t ${{ github.repository_owner }}/todo-frontend:${{ github.sha }} frontend
+
+      - name: Push images to registry (optional)
+        if: env.PUSH_IMAGES == 'true' && secrets.DOCKERHUB_TOKEN
+        run: |
+          docker push ${{ github.repository_owner }}/todo-backend:${{ github.sha }}
+          docker push ${{ github.repository_owner }}/todo-frontend:${{ github.sha }}
+
+      - name: Upload build artifacts (frontend build)
+        if: success() && -d frontend/dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+      - name: Show summary
+        run: |
+          echo "Backend image: ${{ github.repository_owner }}/todo-backend:${{ github.sha }}"
+          echo "Frontend image: ${{ github.repository_owner }}/todo-frontend:${{ github.sha }}"
+
+  # (Optional) A separate job could run security scans (Trivy) or linting.
