@@ -23,7 +23,6 @@ jobs:
         with:
           node-version: '18'
 
-      # Backend: install & test
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
@@ -32,7 +31,6 @@ jobs:
         working-directory: backend
         run: npm test --if-present
 
-      # Frontend: install, test and build
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
@@ -45,7 +43,7 @@ jobs:
         working-directory: frontend
         run: npm run build --if-present
 
-      # Only attempt Docker login if token is set (use expression wrapper)
+      # Docker login only if DOCKERHUB_TOKEN secret exists (expression must be wrapped)
       - name: Log in to Docker Hub (optional)
         if: ${{ secrets.DOCKERHUB_TOKEN != '' }}
         uses: docker/login-action@v3
@@ -53,37 +51,38 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Build backend Docker image
       - name: Build backend Docker image
         run: |
           docker build -f backend/Dockerfile -t ${{ github.repository_owner }}/todo-backend:${{ github.sha }} backend
 
-      # Build frontend Docker image
       - name: Build frontend Docker image
         run: |
           docker build -f frontend/Dockerfile -t ${{ github.repository_owner }}/todo-frontend:${{ github.sha }} frontend
 
-      # Push images only when PUSH_IMAGES=='true' AND token exists (full expression wrapped)
+      # Push images only when PUSH_IMAGES == 'true' AND token exists (expression wrapped)
       - name: Push images to Docker Hub (optional)
         if: ${{ env.PUSH_IMAGES == 'true' && secrets.DOCKERHUB_TOKEN != '' }}
         run: |
           docker push ${{ github.repository_owner }}/todo-backend:${{ github.sha }}
           docker push ${{ github.repository_owner }}/todo-frontend:${{ github.sha }}
 
-      # Upload frontend build artifact only if the directory exists: use a run step that checks, then uploads
-      - name: Upload frontend build artifact if exists
+      - name: Archive frontend build if present
         run: |
           if [ -d frontend/dist ]; then
-            echo "Uploading frontend/dist"
             tar -czf frontend-dist.tar.gz -C frontend dist
-            echo "artifact-created"
+            echo "ARTIFACT_CREATED=true" >> $GITHUB_ENV
           else
-            echo "No frontend/dist directory, skipping artifact upload"
+            echo "ARTIFACT_CREATED=false" >> $GITHUB_ENV
           fi
 
-      - name: Upload artifact (only if created)
-        if: ${{ always() && (steps.upload_artifact.outcome == 'success' || true) }}
+      - name: Upload frontend artifact if it was created
+        if: ${{ env.ARTIFACT_CREATED == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
           path: frontend-dist.tar.gz
+
+      - name: Show summary
+        run: |
+          echo "Backend image: ${{ github.repository_owner }}/todo-backend:${{ github.sha }}"
+          echo "Frontend image: ${{ github.repository_owner }}/todo-frontend:${{ github.sha }}"
