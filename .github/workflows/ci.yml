@@ -84,3 +84,11 @@ jobs:
         run: |
           echo "Backend image: ${{ github.repository_owner }}/todo-backend:${{ github.sha }}"
           echo "Frontend image: ${{ github.repository_owner }}/todo-frontend:${{ github.sha }}"
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
