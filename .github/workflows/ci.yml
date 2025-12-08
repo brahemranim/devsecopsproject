@@ -88,28 +88,16 @@ jobs:
         with:
           sarif_file: 'trivy-frontend-results.sarif'
           category: 'trivy-frontend'
-      - name: Push images to Docker Hub (optional)
-        run: |
-          docker push ${{ github.repository_owner }}/todo-backend:${{ github.sha }}
-          docker push ${{ github.repository_owner }}/todo-frontend:${{ github.sha }}
 
-      - name: Archive frontend build if present
-        run: |
-          if [ -d frontend/dist ]; then
-            tar -czf frontend-dist.tar.gz -C frontend dist
-            echo "ARTIFACT_CREATED=true" >> $GITHUB_ENV
-          else
-            echo "ARTIFACT_CREATED=false" >> $GITHUB_ENV
-          fi
-
-      - name: Upload frontend artifact if it was created
-        if: ${{ env.ARTIFACT_CREATED == 'true' }}
+      - name: Upload Trivy SARIF artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-build
-          path: frontend-dist.tar.gz
+          name: trivy-reports
+          path: |
+            trivy-backend-results.sarif
+            trivy-frontend-results.sarif
 
-      - name: Show summary
+      - name: Push images to Docker Hub (optional)
         run: |
           echo "Backend image: ${{ github.repository_owner }}/todo-backend:${{ github.sha }}"
           echo "Frontend image: ${{ github.repository_owner }}/todo-frontend:${{ github.sha }}"
