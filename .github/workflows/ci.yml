@@ -67,35 +67,35 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ github.repository_owner }}/todo-backend:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-backend-results.sarif'
+          format: 'json'
+          output: 'trivy-backend-results.json'
 
       - name: Run Trivy vulnerability scan on frontend image
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ github.repository_owner }}/todo-frontend:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-frontend-results.sarif'
+          format: 'json'
+          output: 'trivy-frontend-results.json'
 
       - name: Upload Trivy backend report to GitHub Security tab
         uses: actions/upload-artifact@v4
         with:
-          sarif_file: 'trivy-backend-results.sarif'
+          path: 'trivy-backend-results.json'
           category: 'trivy-backend'
 
       - name: Upload Trivy frontend report to GitHub Security tab
         uses: actions/upload-artifact@v4
         with:
-          sarif_file: 'trivy-frontend-results.sarif'
+          path: 'trivy-frontend-results.json'
           category: 'trivy-frontend'
 
-      - name: Upload Trivy SARIF artifacts
+      - name: Upload Trivy json artifacts
         uses: actions/upload-artifact@v4
         with:
           name: trivy-reports
           path: |
-            trivy-backend-results.sarif
-            trivy-frontend-results.sarif
+            trivy-backend-results.json
+            trivy-frontend-results.json
 
       - name: Push images to Docker Hub (optional)
         run: |
