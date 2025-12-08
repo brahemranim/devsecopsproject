@@ -2,6 +2,7 @@ const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { usersRegistered, userLogins, dbErrors } = require('../utils/metrics');
 
 const genToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET || 'secretkey', { expiresIn: '1d' });
@@ -22,9 +23,11 @@ exports.register = async (req, res, next) => {
     const user = new User({ name, email, password: hashed });
     await user.save();
 
+    usersRegistered.inc();
     const token = genToken(user._id);
     res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email } });
   } catch (err) {
+    dbErrors.inc();
     next(err);
   }
 };
@@ -41,9 +44,11 @@ exports.login = async (req, res, next) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
+    userLogins.inc();
     const token = genToken(user._id);
     res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
   } catch (err) {
+    dbErrors.inc();
     next(err);
   }
 };

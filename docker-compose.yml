@@ -1,6 +1,19 @@
 version: "3.9"
 
 services:
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
   backend:
     build: ./backend
     container_name: backend
@@ -11,7 +24,8 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
 
   frontend:
     build: ./frontend
@@ -21,17 +35,9 @@ services:
     depends_on:
       - backend
 
-  mongo:
-    image: mongo:7
-    container_name: mongo
-    volumes:
-      - mongo_data:/data/db
-    ports:
-      - "27017:27017"
-
   prometheus:
     image: prom/prometheus
-    container_name: prometheus
+    container_name: prometheus11
     ports:
       - "9090:9090"
     volumes:
@@ -39,7 +45,7 @@ services:
 
   grafana:
     image: grafana/grafana
-    container_name: grafana
+    container_name: grafana11
     ports:
       - "3001:3000"
     environment:
