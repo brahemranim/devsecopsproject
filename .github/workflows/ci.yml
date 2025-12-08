@@ -89,13 +89,7 @@ jobs:
           path: 'trivy-frontend-results.json'
           category: 'trivy-frontend'
 
-      - name: Upload Trivy json artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-reports
-          path: |
-            trivy-backend-results.json
-            trivy-frontend-results.json
+      
 
       - name: Push images to Docker Hub (optional)
         run: |
